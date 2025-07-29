@@ -16,19 +16,16 @@ export default function Home() {
   const [isAiTyping, setIsAiTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Effect to protect the page
   useEffect(() => {
     if (!isLoading && !token) {
       router.push('/login');
     }
   }, [token, isLoading, router]);
 
-  // Effect to scroll down when new messages appear
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  // Effect to load previous chat history
   useEffect(() => {
     const fetchMessages = async () => {
       if (token) {
@@ -39,14 +36,16 @@ export default function Home() {
           const data = await res.json();
           setMessages(data);
         } else {
-          logout(); // Logout if token is invalid
+          logout();
         }
+      } else {
+        // THIS IS THE FIX: If no token exists (user logged out), clear the message state.
+        setMessages([]);
       }
     };
     fetchMessages();
   }, [token, logout]);
 
-  // Main function to handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() === '' || isAiTyping) return;
@@ -57,7 +56,6 @@ export default function Home() {
     setInputValue('');
     setIsAiTyping(true);
 
-    // Save user message to DB
     await fetch('/api/messages', {
         method: 'POST',
         headers: {
@@ -67,11 +65,10 @@ export default function Home() {
         body: JSON.stringify(userMessage)
     });
 
-    // Call the NEW AI API
     const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }) // Send the whole history for context
+        body: JSON.stringify({ messages: newMessages })
     });
     
     if (res.ok) {
@@ -79,7 +76,6 @@ export default function Home() {
         const aiMessage: Message = { text: reply, sender: 'ai' };
         setMessages(prev => [...prev, aiMessage]);
 
-        // Save AI message to DB
         await fetch('/api/messages', {
             method: 'POST',
             headers: {
