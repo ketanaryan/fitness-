@@ -10,17 +10,14 @@ interface AuthenticatedRequest extends NextApiRequest {
 const withAuth = (handler: (req: AuthenticatedRequest, res: NextApiResponse) => void) => 
   async (req: AuthenticatedRequest, res: NextApiResponse) => {
     const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ message: 'Authentication token missing' });
-    }
+    if (!token) return res.status(401).json({ message: 'Auth token missing' });
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
       req.user = decoded;
       return handler(req, res);
     } catch (error) {
-      return res.status(401).json({ message: 'Invalid or expired token' });
+      return res.status(401).json({ message: 'Invalid token' });
     }
 };
 
@@ -29,13 +26,23 @@ const handler = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const db = client.db('fitness-chatbot');
   
   if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated for this operation' });
+    return res.status(401).json({ message: 'Not authenticated' });
   }
 
   if (req.method === 'GET') {
+    // --- START DEBUG LOGS ---
+    console.log("---- INCOMING GET REQUEST ----");
+    console.log("Fetching messages for userId:", req.user.userId);
+    // --- END DEBUG LOGS ---
+
     try {
-      // THE ONLY CHANGE IS ON THIS NEXT LINE
       const messages = await db.collection('messages').find({ userId: new ObjectId(req.user.userId) }).sort({ timestamp: 1 }).toArray();
+      
+      // --- START DEBUG LOGS ---
+      console.log("Found messages in DB:", messages.length);
+      console.log("----------------------------");
+      // --- END DEBUG LOGS ---
+      
       res.status(200).json(messages);
     } catch (error) {
       res.status(500).json({ message: 'Could not fetch messages' });
