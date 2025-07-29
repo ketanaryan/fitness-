@@ -29,7 +29,8 @@ export default function Home() {
   useEffect(() => {
     const fetchMessages = async () => {
       if (token) {
-        const res = await fetch('/api/messages', {
+        // THE ONLY CHANGE IS ON THIS NEXT LINE
+        const res = await fetch(`/api/messages?timestamp=${new Date().getTime()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -39,7 +40,6 @@ export default function Home() {
           logout();
         }
       } else {
-        // THIS IS THE FIX: If no token exists (user logged out), clear the message state.
         setMessages([]);
       }
     };
